@@ -57,4 +57,20 @@ function carregar_css_turmas_estudantes() {
 }
 add_action('wp_enqueue_scripts', 'carregar_css_turmas_estudantes');
 // Hook para inicializar o plugin
+function restringir_acesso_apenas_para_editores() {
+    // Verifica se o usuário está logado e se NÃO é um editor ou superior
+    if (is_user_logged_in() && !current_user_can('edit_others_posts')) {
+        // Redireciona usuários não autorizados para a página inicial
+        wp_redirect(home_url());
+        exit;
+    }
+
+    // Se o usuário não estiver logado, redireciona para a página de login
+    if (!is_user_logged_in()) {
+        auth_redirect();
+    }
+}
+add_action('template_redirect', 'restringir_acesso_apenas_para_editores');
+
+
 add_action( 'init', 'mathewlucca_init' );
