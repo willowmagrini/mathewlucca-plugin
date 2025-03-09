@@ -5,8 +5,6 @@
 
 get_header();  // Inclui o cabeçalho do site
 
-
-
 $args = array(
     'post_type'      => 'turma',  // Nome do CPT
     'posts_per_page' => -1,       // Pega todos os itens
@@ -17,11 +15,11 @@ $args = array(
 $query = new WP_Query( $args );
 
 if ( $query->have_posts() ) {
-    echo '<ul>';
+    echo '<div class="turmas">';
     while ( $query->have_posts() ) {
         $query->the_post();
-        echo '<li>' . get_the_title() . '</li>';
-        echo '<ul>';
+        echo '<h2>' . get_the_title() . '</h2>';
+        echo '<div id="turma-'.get_the_id().'"class="cada-turma">';
         $params = array(
             'where' => 'turma.id IN ('.get_the_id().')',
             'limit'   => -1  // Return all rows
@@ -33,12 +31,13 @@ if ( $query->have_posts() ) {
         if ( 0 < $pods->total() ) {
             while ( $pods->fetch() ) {
                 // print_r($pods);
-                echo '<li>'.$pods->display( 'post_title' ).'</li>';
+                echo '<div class="cada-aluno" id="aluno-'.$pods->display( 'post_id' ).'">'.$pods->display( 'post_thumbnail' ).'<br>';
+                echo ''.$pods->display( 'post_title' ).'</div>';
             }
         }
-        echo "</ul>";
+        echo "</div>";
     }
-    echo '</ul>';
+    echo '</div>';
 } else {
     echo 'Nenhuma turma encontrada.';
 }
