@@ -1,0 +1,93 @@
+/* Container principal das turmas */
+.turmas-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Estilo para cada turma */
+.turma {
+    margin-bottom: 40px;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.turma h2 {
+    font-size: 28px;
+    margin-bottom: 20px;
+    color: #333;
+    text-align: center;
+    border-bottom: 2px solid #0073e6;
+    padding-bottom: 10px;
+}
+
+/* Lista de estudantes */
+.estudantes-lista {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px; /* Espaçamento entre os estudantes */
+    justify-content: center;
+}
+
+/* Estilo para cada estudante */
+.estudante {
+    flex: 1 1 calc(25% - 20px); /* 4 estudantes por linha em telas grandes */
+    box-sizing: border-box;
+    text-align: center;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    padding: 15px;
+    border-radius: 8px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.estudante:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Thumbnail do estudante */
+.estudante-thumbnail img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 50%;
+    border: 3px solid #0073e6;
+    padding: 3px;
+}
+
+/* Nome do estudante */
+.estudante-nome {
+    margin-top: 10px;
+    font-size: 16px;
+    color: #555;
+    font-weight: 600;
+}
+
+/* Responsividade */
+@media (max-width: 1024px) {
+    .estudante {
+        flex: 1 1 calc(33.33% - 20px); /* 3 estudantes por linha em telas médias */
+    }
+}
+
+@media (max-width: 768px) {
+    .estudante {
+        flex: 1 1 calc(50% - 20px); /* 2 estudantes por linha em tablets */
+    }
+
+    .turma h2 {
+        font-size: 24px;
+    }
+}
+
+@media (max-width: 480px) {
+    .estudante {
+        flex: 1 1 100%; /* 1 estudante por linha em celulares */
+    }
+
+    .turma h2 {
+        font-size: 20px;
+    }
+}

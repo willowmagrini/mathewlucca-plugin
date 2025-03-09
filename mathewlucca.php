@@ -45,6 +45,16 @@ function mathewlucca_lista_por_turma_page() {
         exit;
     }
 }
-
+function carregar_css_turmas_estudantes() {
+    // if (is_page('turmas-estudantes')) { // Substitua pelo slug ou ID da sua página
+    // }
+    wp_enqueue_style(
+        'mathewlucca-plugin-css',
+        plugin_dir_url(__FILE__) . 'assets/mathewlucca-plugin.css',
+        array(),
+        filemtime(plugin_dir_path(__FILE__) . 'assets/mathewlucca-plugin.css')
+    );
+}
+add_action('wp_enqueue_scripts', 'carregar_css_turmas_estudantes');
 // Hook para inicializar o plugin
 add_action( 'init', 'mathewlucca_init' );

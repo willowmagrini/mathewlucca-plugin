@@ -1,49 +1,76 @@
 <?php
 /**
- * Template para exibir a lista de Estudantes agrupados por Turma
+ * Template Name: Turmas e Estudantes
+ * Description: Template para exibir turmas e estudantes agrupados.
  */
 
-get_header();  // Inclui o cabeçalho do site
+get_header(); // Inclui o cabeçalho do site
+?>
 
-$args = array(
-    'post_type'      => 'turma',  // Nome do CPT
-    'posts_per_page' => -1,       // Pega todos os itens
-    'orderby'        => 'title',  // Ordena pelo título (nome da turma)
-    'order'          => 'ASC'     // Ordem alfabética crescente
-);
+<div class="turmas-container">
+    <?php
+    // Query para buscar todas as turmas
+    $args = array(
+        'post_type'      => 'turma',  // Nome do CPT
+        'posts_per_page' => -1,       // Pega todos os itens
+        'orderby'        => 'title',  // Ordena pelo título (nome da turma)
+        'order'          => 'ASC'     // Ordem alfabética crescente
+    );
 
-$query = new WP_Query( $args );
+    $query = new WP_Query($args);
 
-if ( $query->have_posts() ) {
-    echo '<div class="turmas">';
-    while ( $query->have_posts() ) {
-        $query->the_post();
-        echo '<h2>' . get_the_title() . '</h2>';
-        echo '<div id="turma-'.get_the_id().'"class="cada-turma">';
-        $params = array(
-            'where' => 'turma.id IN ('.get_the_id().')',
-            'limit'   => -1  // Return all rows
+    if ($query->have_posts()) {
+        while ($query->have_posts()) {
+            $query->the_post();
+            $turma_id = get_the_ID();
+            $turma_title = get_the_title();
+            ?>
+            <div class="turma">
+                <h2><?php echo esc_html($turma_title); ?></h2>
+                <div class="estudantes-lista">
+                    <?php
+                    // Busca os estudantes associados à turma atual usando Pods
+                    $params = array(
+                        'where' => 'turma.id IN (' . $turma_id . ')',
+                        'limit' => -1  // Retorna todos os estudantes
+                    );
+                    $pods = pods('estudante', $params);
 
-        );
-        //search in articles pod
-        $pods = pods( 'estudante', $params );
-        //loop through results
-        if ( 0 < $pods->total() ) {
-            while ( $pods->fetch() ) {
-                // print_r($pods);
-                echo '<div class="cada-aluno" id="aluno-'.$pods->display( 'post_id' ).'">'.$pods->display( 'post_thumbnail' ).'<br>';
-                echo ''.$pods->display( 'post_title' ).'</div>';
-            }
+                    if ($pods->total() > 0) {
+                        while ($pods->fetch()) {
+                            $estudante_id = $pods->display('post_id');
+                            $estudante_nome = $pods->display('post_title');
+                            $estudante_thumbnail = $pods->display('post_thumbnail');
+                            ?>
+                            <div class="estudante">
+                                <?php if ($estudante_thumbnail) : ?>
+                                    <div class="estudante-thumbnail">
+                                        <?php echo $estudante_thumbnail; ?>
+                                    </div>
+                                <?php endif; ?>
+                                <div class="estudante-nome">
+                                    <?php echo esc_html($estudante_nome); ?>
+                                </div>
+                            </div>
+                            <?php
+                        }
+                    } else {
+                        echo '<p>Nenhum estudante encontrado nesta turma.</p>';
+                    }
+                    ?>
+                </div>
+            </div>
+            <?php
         }
-        echo "</div>";
+    } else {
+        echo '<p>Nenhuma turma encontrada.</p>';
     }
-    echo '</div>';
-} else {
-    echo 'Nenhuma turma encontrada.';
-}
 
-// Reseta os dados do WP_Query
-wp_reset_postdata();
+    // Reseta os dados do WP_Query
+    wp_reset_postdata();
+    ?>
+</div>
 
-
-get_footer();  // Inclui o rodapé do site
+<?php
+get_footer(); // Inclui o rodapé do site
+?>
