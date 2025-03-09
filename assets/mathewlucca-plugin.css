@@ -52,7 +52,7 @@
 .estudante-thumbnail img {
     max-width: 100%;
     height: auto;
-    border-radius: 50%;
+    border-radius: 10px;
     border: 3px solid #0073e6;
     padding: 3px;
 }
@@ -64,7 +64,133 @@
     color: #555;
     font-weight: 600;
 }
+/* Estilos gerais */
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f4f4f9;
+    margin: 0;
+    padding: 0;
+    color: #333;
+    font-size:18px;
+}
+.container {
+    max-width: 900px;
+    margin: 50px auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+h2 {
+    text-align: center;
+    color: #2c3e50;
+    margin-bottom: 20px;
+}
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+label {
+    font-weight: bold;
+    color: #34495e;
+}
+input[type="text"],
+input[type="file"] {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 18px;
+    width: 100%;
+    box-sizing: border-box;
+}
+input[type="text"]:focus,
+input[type="file"]:focus {
+    border-color: #3498db;
+    outline: none;
+    box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
+}
+fieldset {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+    margin: 0;
+}
+legend {
+    font-weight: bold;
+    color: #34495e;
+    padding: 0 10px;
+}
+.radio-group {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* 4 colunas com largura igual */
+    gap: 10px; /* Espaçamento entre os itens */
+}
 
+.radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-weight: normal;
+    color: #333;
+    margin: 5px 0 0 35px;
+}
+.radio-group input{
+    -ms-transform: scale(2); /* IE 9 */
+    -webkit-transform: scale(2); /* Chrome, Safari, Opera */
+    transform: scale(2);
+}
+button[type="submit"] {
+    padding: 12px;
+    background-color: #3498db;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    font-size: 18px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+button[type="submit"]:hover {
+    background-color: #2980b9;
+}
+/* Estilos responsivos */
+@media (max-width: 900px) {
+    .container {
+        margin: 20px;
+        padding: 15px;
+    }
+    .radio-group {
+        grid-template-columns: repeat(2, 1fr); /* 2 colunas em telas menores */
+    }
+    h2 {
+        font-size: 30px;
+    }
+    input[type="text"],
+    input[type="file"] {
+        font-size: 18px;
+    }
+    button[type="submit"] {
+        font-size: 18px;
+    }
+}
+@media (max-width: 480px) {
+    .container {
+        margin: 10px;
+        padding: 10px;
+    }
+    .radio-group {
+        grid-template-columns: repeat(2, 1fr); /* 2 colunas em telas menores */
+    }   
+    h2 {
+        font-size: 30px;
+    }
+    .radio-group {
+        gap: 8px;
+    }
+    button[type="submit"] {
+        padding: 10px;
+    }
+}
 /* Responsividade */
 @media (max-width: 1024px) {
     .estudante {
@@ -78,7 +204,7 @@
     }
 
     .turma h2 {
-        font-size: 24px;
+        font-size: 30px;
     }
 }
 
@@ -88,6 +214,6 @@
     }
 
     .turma h2 {
-        font-size: 20px;
+        font-size: 30px;
     }
 }

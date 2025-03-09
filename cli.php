@@ -34,6 +34,8 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 
         WP_CLI::success('🎉 100 estudantes foram criados e atribuídos às turmas.');
     }
+
+    // Função para reatribuir estudantes a turmas
     function reatribuir_estudantes_para_turmas() {
         $turmas = range(21, 45); // IDs das turmas possíveis
     
@@ -69,6 +71,8 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
             WP_CLI::warning('⚠️ Nenhum estudante encontrado.');
         }
     }
+
+    // Função para definir imagem destacada para estudantes
     function definir_imagem_destacada_para_estudantes() {
         $imagem_id = 147; // ID da imagem genérica
     
@@ -93,10 +97,79 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
             WP_CLI::warning('⚠️ Nenhum estudante encontrado.');
         }
     }
-    
-    
-    // Registra o comando no WP-CLI
+
+    // Função para converter posts para o CPT estudante e atribuir turmas
+    function converter_posts_para_estudantes() {
+        // Busca todos os posts
+        $args = array(
+            'post_type'      => 'post',
+            'posts_per_page' => -1, // Pega todos os posts
+            'orderby'        => 'ID',
+            'order'          => 'ASC',
+        );
+
+        $query = new WP_Query($args);
+
+        if ($query->have_posts()) {
+            while ($query->have_posts()) {
+                $query->the_post();
+                $post_id = get_the_ID();
+                $post_title = get_the_title();
+                $categories = get_the_category($post_id);
+
+                // Converte o post para o CPT estudante
+                $estudante_id = wp_insert_post([
+                    'post_title'   => $post_title,
+                    'post_status'  => 'publish',
+                    'post_type'    => 'estudante',
+                ]);
+
+                if (!is_wp_error($estudante_id)) {
+                    // Se houver categorias, usa o nome da primeira categoria para buscar a turma
+                    if (!empty($categories)) {
+                        $categoria_nome = $categories[0]->name;
+
+                        // Busca a turma com o mesmo nome da categoria
+                        $turma_query = new WP_Query([
+                            'post_type'      => 'turma',
+                            'posts_per_page' => 1,
+                            'title'          => $categoria_nome,
+                        ]);
+
+                        if ($turma_query->have_posts()) {
+                            $turma_query->the_post();
+                            $turma_id = get_the_ID();
+
+                            // Cria a relação entre o estudante e a turma usando Pods
+                            pods('estudante', $estudante_id)->save('turma', $turma_id);
+
+                            WP_CLI::success("✅ Post ID $post_id convertido para estudante ID $estudante_id e atribuído à turma ID $turma_id.");
+                        } else {
+                            WP_CLI::warning("⚠️ Nenhuma turma encontrada com o nome da categoria: $categoria_nome.");
+                        }
+
+                        // Reseta a query da turma
+                        wp_reset_postdata();
+                    } else {
+                        WP_CLI::warning("⚠️ Post ID $post_id não tem categorias.");
+                    }
+                } else {
+                    WP_CLI::warning("⚠️ Erro ao converter post ID $post_id para estudante.");
+                }
+            }
+
+            // Reseta os dados do WP_Query
+            wp_reset_postdata();
+
+            WP_CLI::success('🎉 Todos os posts foram convertidos para estudantes e atribuídos às turmas.');
+        } else {
+            WP_CLI::warning('⚠️ Nenhum post encontrado.');
+        }
+    }
+
+    // Registra os comandos no WP-CLI
     WP_CLI::add_command('mathewlucca criar-estudantes', 'criar_estudantes_e_atribuir_turmas');
     WP_CLI::add_command('mathewlucca reatribuir-estudantes', 'reatribuir_estudantes_para_turmas');
     WP_CLI::add_command('mathewlucca imagem-estudantes', 'definir_imagem_destacada_para_estudantes');
+    WP_CLI::add_command('mathewlucca converter-posts', 'converter_posts_para_estudantes');
 }
