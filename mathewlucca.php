@@ -24,19 +24,23 @@ function mathewlucca_init() {
     // Registrar rewrite rules para as páginas personalizadas
     add_rewrite_rule( '^lista-por-turma/?$', 'index.php?lista_por_turma=1', 'top' );
     add_rewrite_rule( '^cadastro-estudante/?$', 'index.php?cadastro_estudante=1', 'top' );
-
+    add_rewrite_rule( '^cadastro-massa/?$', 'index.php?cadastro_massa=1', 'top' );
+    add_rewrite_rule( '^processa-cadastro-massa/?$', 'index.php?processa_cadastro_massa=1', 'top' );
     // Adicionar os filtros para consultar as páginas personalizadas
     add_filter( 'query_vars', 'mathewlucca_query_vars' );
 
     // Adicionar as funções que renderizam as páginas
     add_action( 'template_redirect', 'mathewlucca_lista_por_turma_page' );
     add_action( 'template_redirect', 'mathewlucca_cadastro_estudante_page' );
+    add_action( 'template_redirect', 'mathewlucca_cadastro_massa_page' );
 }
 
 // Registrar query vars para verificar se estamos nas páginas personalizadas
 function mathewlucca_query_vars( $query_vars ) {
     $query_vars[] = 'lista_por_turma';
     $query_vars[] = 'cadastro_estudante';
+    $query_vars[] = 'cadastro_massa';
+    $query_vars[] = 'processa_cadastro_massa';
     return $query_vars;
 }
 
@@ -56,8 +60,57 @@ function mathewlucca_cadastro_estudante_page() {
     }
 }
 
+// Renderizar a página /cadastro-massa
+function mathewlucca_cadastro_massa_page() {
+    if ( get_query_var( 'cadastro_massa' ) ) {
+        include( plugin_dir_path( __FILE__ ) . 'templates/cadastro-massa.php' );
+        exit;
+    }
+}
 // Inicializar o plugin
 add_action( 'init', 'mathewlucca_init' );
+
+function mathewlucca_processa_cadastro_massa_page() {
+    if ( get_query_var( 'processa_cadastro_massa' ) ) {
+        // Busca o transiente
+        $dados = get_transient('cadastro_massa_json');
+
+        // Se não houver dados, finaliza o processo
+        if (!$dados) {
+            echo '<p>Processo expirado ou não iniciado.</p>';
+            exit;
+        }
+
+        // Lista as turmas ainda presentes no transiente
+        $turmas = array_keys($dados);
+
+        // Se não houver mais turmas, encerra o processo
+        if (empty($turmas)) {
+            delete_transient('cadastro_massa_json'); // Limpa o transiente após o fim
+            echo '<p>✅ Cadastro concluído com sucesso!</p>';
+            exit;
+        }
+
+        // Pega a primeira turma disponível
+        $nome_turma = $turmas[0];
+        $estudantes = $dados[$nome_turma];
+
+        // Chama a função que vai processar até 4 estudantes e fazer as remoções
+        processar_uma_turma($nome_turma, $estudantes);
+
+        // Mensagem de feedback simples
+        echo "<p>Processando estudantes da turma <strong>$nome_turma</strong>...</p>";
+        echo '<p>Redirecionando para o próximo grupo de estudantes...</p>';
+
+        // Redireciona automaticamente para continuar o processo
+        echo '<script>setTimeout(function(){ window.location.href = "?processa_cadastro_massa=1"; }, 2000);</script>';
+
+        exit;
+    }
+}
+
+add_action( 'template_redirect', 'mathewlucca_processa_cadastro_massa_page' );
+
 
 function carregar_css_turmas_estudantes() {
     // if (is_page('turmas-estudantes')) { // Substitua pelo slug ou ID da sua página
@@ -86,78 +139,6 @@ function restringir_acesso_apenas_para_editores() {
 }
 // add_action('template_redirect', 'restringir_acesso_apenas_para_editores');
 
-function converter_post_para_estudante_automaticamente($post_id, $post, $update) {
-    // Verifica se é um novo post (não uma atualização) e se é do tipo 'post'
-    if ($post->post_type === 'post') {
-        // Verifica se o post não está no lixo
-        if ($post->post_status == 'publish' ) {
-            $post_title = $post->post_title;
-            $categories = get_the_category($post_id);
-            $term_list = wp_get_post_terms($post_id, 'category', array('fields' => 'names'));
-            error_log("Categorias encontradas para o post ID $post_id: " . print_r($term_list, true));
-
-            // Converte o post para o CPT estudante
-            $estudante_id = wp_insert_post([
-                'post_title'   => $post_title,
-                'post_status'  => 'publish',
-                'post_type'    => 'estudante',
-            ]);
-
-            if (!is_wp_error($estudante_id)) {
-                // Se houver categorias, usa o nome da primeira categoria para buscar a turma
-                if (!empty($categories)) {
-                    $categoria_nome = $categories[0]->name;
-
-                    // Busca a turma com o mesmo nome da categoria
-                    $turma_query = new WP_Query([
-                        'post_type'      => 'turma',
-                        'posts_per_page' => 1,
-                        'title'          => $categoria_nome,
-                    ]);
-
-                    if ($turma_query->have_posts()) {
-                        $turma_query->the_post();
-                        $turma_id = get_the_ID();
-
-                        // Cria a relação entre o estudante e a turma usando Pods
-                        pods('estudante', $estudante_id)->save('turma', $turma_id);
-
-                        error_log("✅ Post ID $post_id convertido para estudante ID $estudante_id e atribuído à turma ID $turma_id.");
-                    } else {
-                        error_log("⚠️ Nenhuma turma encontrada com o nome da categoria: $categoria_nome.");
-                    }
-
-                    // Reseta a query da turma
-                    wp_reset_postdata();
-                } else {
-                    error_log("⚠️ Post ID $post_id não tem categorias.");
-                }
-
-                // Copia a imagem destacada do post original para o estudante
-                $imagem_destacada_id = get_post_thumbnail_id($post_id);
-                if ($imagem_destacada_id) {
-                    set_post_thumbnail($estudante_id, $imagem_destacada_id);
-                    error_log("✅ Imagem destacada copiada para o estudante ID $estudante_id.");
-                } else {
-                    error_log("⚠️ Post ID $post_id não tem imagem destacada.");
-                }
-
-                // Define o post original como rascunho
-                wp_update_post([
-                    'ID'          => $post_id,
-                    'post_status' => 'draft',
-                ]);
-
-                error_log("✅ Post ID $post_id definido como rascunho.");
-            } else {
-                error_log("⚠️ Erro ao converter post ID $post_id para estudante.");
-            }
-        }
-    }
-}
-// add_action('publish_post', 'converter_post_para_estudante_automaticamente', 10, 3);
-// add_action('post_updated', 'converter_post_para_estudante_automaticamente', 10, 3);
-// Desativa a geração de thumbnails
 add_filter('intermediate_image_sizes_advanced', 'desativar_thumbnails');
 
 function desativar_thumbnails($sizes) {
@@ -223,4 +204,79 @@ add_action('wp_ajax_buscar_estudante_atualizado', function () {
     </div>
     <?php
     wp_die(); // Encerra corretamente
+});
+
+add_filter('upload_mimes', function($mimes) {
+    $mimes['json'] = 'application/json';
+    return $mimes;
+});
+
+function processar_uma_turma() {
+    $transient_data = get_transient('cadastro_massa_json');
+    if (!$transient_data || empty($transient_data['dados'])) return [];
+
+    $dados = $transient_data['dados'];
+    $turmas = array_keys($dados);
+    $nome_turma = $turmas[0];
+    $estudantes = $dados[$nome_turma];
+    $processados_nomes = [];
+    $contador = 0;
+
+    $turma = get_page_by_title($nome_turma, OBJECT, 'turma');
+    if (!$turma) {
+        $turma_id = wp_insert_post([
+            'post_title'  => $nome_turma,
+            'post_type'   => 'turma',
+            'post_status' => 'publish'
+        ]);
+    } else {
+        $turma_id = $turma->ID;
+    }
+
+    if (!$turma_id) return [];
+
+    foreach ($estudantes as $key => $nome_estudante) {
+        if ($contador >= 4) break;
+
+        $estudante_id = wp_insert_post([
+            'post_title'  => sanitize_text_field($nome_estudante),
+            'post_type'   => 'estudante',
+            'post_status' => 'publish'
+        ]);
+
+        if ($estudante_id && !is_wp_error($estudante_id)) {
+            pods('estudante', $estudante_id)->save(['turma' => $turma_id]);
+            $processados_nomes[] = $nome_estudante;
+        }
+
+        unset($dados[$nome_turma][$key]); // Remove estudante processado
+        $contador++;
+        $transient_data['processados']++; // Incrementa o contador global
+    }
+
+    if (empty($dados[$nome_turma])) unset($dados[$nome_turma]); // Remove turma vazia
+
+    $transient_data['dados'] = $dados;
+    set_transient('cadastro_massa_json', $transient_data, HOUR_IN_SECONDS); // Atualiza o transiente
+
+    return $processados_nomes;
+}
+
+
+add_action('wp_ajax_processar_cadastro_massa', function () {
+    $transient_data = get_transient('cadastro_massa_json');
+    if (!$transient_data) {
+        wp_send_json_error(['message' => 'Processo expirado ou não iniciado.']);
+    }
+
+    $estudantes_processados = processar_uma_turma();
+
+    $finalizado = empty($transient_data['dados']);
+    wp_send_json_success([
+        'qtd_processados' => count($estudantes_processados),
+        'processados_total' => $transient_data['processados'],
+        'total' => $transient_data['total_alunos'],
+        'estudantes' => $estudantes_processados,
+        'finalizado' => $finalizado
+    ]);
 });
