@@ -165,3 +165,62 @@ function desativar_thumbnails($sizes) {
 }
 add_filter('big_image_size_threshold', '__return_false');
 add_action( 'init', 'mathewlucca_init' );
+
+add_action('wp_ajax_upload_foto_estudante', function () {
+    if (!current_user_can('administrator') && !current_user_can('editor')) {
+        wp_send_json_error('Permissão negada.');
+    }
+
+    $estudante_id = intval($_POST['estudante_id']);
+    if (empty($_FILES['imagem'])) {
+        wp_send_json_error('Nenhuma imagem enviada.');
+    }
+
+    require_once(ABSPATH . 'wp-admin/includes/file.php');
+    $upload = wp_handle_upload($_FILES['imagem'], array('test_form' => false));
+
+    if (isset($upload['error'])) {
+        wp_send_json_error($upload['error']);
+    }
+
+    $attachment = array(
+        'post_mime_type' => $upload['type'],
+        'post_title'     => sanitize_file_name($upload['file']),
+        'post_content'   => '',
+        'post_status'    => 'inherit'
+    );
+
+    $attach_id = wp_insert_attachment($attachment, $upload['file'], $estudante_id);
+    require_once(ABSPATH . 'wp-admin/includes/image.php');
+    $attach_data = wp_generate_attachment_metadata($attach_id, $upload['file']);
+    wp_update_attachment_metadata($attach_id, $attach_data);
+
+    set_post_thumbnail($estudante_id, $attach_id);
+    wp_send_json_success('Imagem atualizada com sucesso.');
+});
+
+add_action('wp_ajax_buscar_estudante_atualizado', function () {
+    $estudante_id = intval($_GET['estudante_id']);
+    $post = get_post($estudante_id);
+
+    if (!$post) {
+        echo '<p>Estudante não encontrado.</p>';
+        wp_die();
+    }
+
+    $nome = get_the_title($post);
+    $thumb = get_the_post_thumbnail($post->ID, 'medium');
+
+    ?>
+    <div id="estudante-<?php echo $post->ID; ?>" class="estudante">
+        <?php if ($thumb): ?>
+            <div class="estudante-thumbnail"><?php echo $thumb; ?></div>
+        <?php endif; ?>
+        <div class="estudante-nome"><?php echo esc_html($nome); ?></div>
+        <?php if (current_user_can('administrator') || current_user_can('editor')): ?>
+            <button onclick="upload_foto(<?php echo $post->ID; ?>)">Atualizar Imagem</button>
+        <?php endif; ?>
+    </div>
+    <?php
+    wp_die(); // Encerra corretamente
+});

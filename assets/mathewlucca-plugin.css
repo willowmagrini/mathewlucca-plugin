@@ -56,6 +56,10 @@
     border: 3px solid #0073e6;
     padding: 3px;
 }
+#lista-title{
+    text-align: center;
+    text-transform: uppercase;
+}
 
 /* Nome do estudante */
 .estudante-nome {
