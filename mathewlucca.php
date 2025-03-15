@@ -26,6 +26,7 @@ function mathewlucca_init() {
     add_rewrite_rule( '^cadastro-estudante/?$', 'index.php?cadastro_estudante=1', 'top' );
     add_rewrite_rule( '^cadastro-massa/?$', 'index.php?cadastro_massa=1', 'top' );
     add_rewrite_rule( '^processa-cadastro-massa/?$', 'index.php?processa_cadastro_massa=1', 'top' );
+    add_rewrite_rule('^lista-por-turma/([^/]+)/?$', 'index.php?lista_por_turma=1&turma_slug=$matches[1]', 'top');
     // Adicionar os filtros para consultar as páginas personalizadas
     add_filter( 'query_vars', 'mathewlucca_query_vars' );
 
@@ -41,6 +42,7 @@ function mathewlucca_query_vars( $query_vars ) {
     $query_vars[] = 'cadastro_estudante';
     $query_vars[] = 'cadastro_massa';
     $query_vars[] = 'processa_cadastro_massa';
+    $query_vars[] = 'turma_slug';
     return $query_vars;
 }
 
@@ -247,21 +249,23 @@ function processar_uma_turma() {
         if ($estudante_id && !is_wp_error($estudante_id)) {
             pods('estudante', $estudante_id)->save(['turma' => $turma_id]);
             $processados_nomes[] = $nome_estudante;
+
+            // ✅ Adiciona na lista de processados no formato Nome - Série
+            $transient_data['lista_processados'][] = $nome_estudante . ' - ' . $nome_turma;
         }
 
-        unset($dados[$nome_turma][$key]); // Remove estudante processado
+        unset($dados[$nome_turma][$key]); // Remove o aluno processado
         $contador++;
-        $transient_data['processados']++; // Incrementa o contador global
+        $transient_data['processados']++; // Incrementa total processados
     }
 
     if (empty($dados[$nome_turma])) unset($dados[$nome_turma]); // Remove turma vazia
 
     $transient_data['dados'] = $dados;
-    set_transient('cadastro_massa_json', $transient_data, HOUR_IN_SECONDS); // Atualiza o transiente
+    set_transient('cadastro_massa_json', $transient_data, 0); // Atualiza o transiente
 
     return $processados_nomes;
 }
-
 
 add_action('wp_ajax_processar_cadastro_massa', function () {
     $transient_data = get_transient('cadastro_massa_json');
@@ -274,9 +278,30 @@ add_action('wp_ajax_processar_cadastro_massa', function () {
     $finalizado = empty($transient_data['dados']);
     wp_send_json_success([
         'qtd_processados' => count($estudantes_processados),
-        'processados_total' => $transient_data['processados'],
+        'processados_total' => $transient_data['processados']+ count($estudantes_processados),
         'total' => $transient_data['total_alunos'],
         'estudantes' => $estudantes_processados,
         'finalizado' => $finalizado
     ]);
 });
+
+// Função para restringir o site inteiro a administradores e editores
+function mathewlucca_restringir_todas_paginas() {
+    // Permitir o acesso ao painel admin e login
+    if (is_admin() || wp_doing_ajax() || in_array($GLOBALS['pagenow'], ['wp-login.php', 'wp-register.php'])) {
+        return;
+    }
+
+    // Verifica se o usuário está logado e se NÃO é um editor ou superior
+    if (is_user_logged_in()) {
+        if (!current_user_can('edit_others_posts')) {
+            // Redireciona para a página inicial
+            wp_redirect(home_url());
+            exit;
+        }
+    } else {
+        // Se não estiver logado, redireciona para o login
+        auth_redirect(); // Redireciona automaticamente para login
+    }
+}
+add_action('template_redirect', 'mathewlucca_restringir_todas_paginas');

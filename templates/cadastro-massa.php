@@ -4,10 +4,7 @@ if (!current_user_can('manage_options')) {
 }
 
 // Carrega o transiente
-$transient_exists = get_transient('cadastro_massa_json');
-$total_alunos = $transient_exists['total_alunos'] ?? 0;
-$processados = $transient_exists['processados'] ?? 0;
-$progresso_inicial = $total_alunos > 0 ? ($processados / $total_alunos) * 100 : 0;
+
 // Se o arquivo foi enviado, processa o upload e armazena no transiente
 if (isset($_FILES['json_file'])) {
     require_once(ABSPATH . 'wp-admin/includes/image.php');
@@ -25,16 +22,22 @@ if (isset($_FILES['json_file'])) {
         if ($dados) {
             $total = array_sum(array_map('count', $dados)); // Conta total de estudantes
             $transient_data = [
-                'total_alunos' => $total,
-                'processados'  => 0,
-                'dados'        => $dados
+                'total_alunos'     => $total,
+                'processados'      => 0,
+                'dados'            => $dados,
+                'lista_processados' => [] // ✅ Lista vazia inicial
             ];
-            set_transient('cadastro_massa_json', $transient_data, HOUR_IN_SECONDS); // Guarda o novo formato
+            set_transient('cadastro_massa_json', $transient_data, 0); // Guarda o novo formato
             echo '<div class="notice notice-success"><p>Arquivo carregado com sucesso!</p></div>';
             $transient_exists = $transient_data;
-        }
+        }        
+
     }
 }
+$transient_exists = get_transient('cadastro_massa_json');
+$total_alunos = $transient_exists['total_alunos'] ?? 0;
+$processados = $transient_exists['processados'] ?? 0;
+$progresso_inicial = $total_alunos > 0 ? ($processados / $total_alunos) * 100 : 0;
 ?>
 
 <div class="wrap">
@@ -54,8 +57,8 @@ if (isset($_FILES['json_file'])) {
         <button id="iniciar-importacao" class="button button-primary">Iniciar/Retomar Importação via AJAX</button>
         <br><br>
 
-        <!-- Mostrar o restante do JSON ainda não processado -->
-        <!-- <h2>Dados Restantes para Importação</h2>
+        <!-- Mostrar o restante do JSON ainda não processado  -->
+         <!-- <h2>Dados Restantes para Importação</h2>
         <pre style="background: #f7f7f7; padding: 15px; border: 1px solid #ddd; max-height: 400px; overflow: auto;"><?php echo esc_html(json_encode($transient_exists, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)); ?></pre> -->
 
         <!-- Botão para cancelar e apagar o processo atual (opcional) -->
@@ -94,8 +97,19 @@ if (isset($_FILES['json_file'])) {
         <p id="status-progresso">Processados <?php echo $processados; ?> de <?php echo $total_alunos; ?> estudantes.</p>
 
         <!-- Lista de alunos processados -->
-        <h3>Estudantes Processados neste momento</h3>
-        <ul id="log-processados" style="max-height: 300px; overflow: auto; border: 1px solid #ccc; padding: 10px;"></ul>
+        <h3>Últimos estudantes processados</h3>
+        <ul id="log-processados" style="max-height: 300px; overflow: auto; border: 1px solid #ccc; padding: 10px;">Nenhum estudante processado</ul>
+        <!-- Lista completa dos estudantes já processados -->
+        <h3>Estudantes Já processados deste arquivo</h3>
+        <ul style="max-height: 300px; overflow: auto; border: 1px solid #ccc; padding: 10px;">
+            <?php if (!empty($transient_exists['lista_processados'])): ?>
+                <?php foreach ($transient_exists['lista_processados'] as $aluno): ?>
+                    <li><?php echo esc_html($aluno); ?></li>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <li>Nenhum estudante processado ainda.</li>
+            <?php endif; ?>
+        </ul>
 
     <?php endif; ?>
 </div>

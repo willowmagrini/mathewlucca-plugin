@@ -9,13 +9,21 @@ get_header(); // Inclui o cabeçalho do site
 
 <div class="turmas-container">
     <?php
-    // Query para buscar todas as turmas
+    // Captura o slug da turma (ex.: 6A)
+    $turma_slug = get_query_var('turma_slug');
+
+    // Argumentos para query
     $args = array(
         'post_type'      => 'turma',
         'posts_per_page' => -1,
         'orderby'        => 'title',
         'order'          => 'ASC'
     );
+
+    // Se tiver slug da turma, filtrar
+    if ($turma_slug) {
+        $args['title'] = $turma_slug; // filtra pelo título exato
+    }
 
     $query = new WP_Query($args);
 
@@ -75,7 +83,6 @@ get_header(); // Inclui o cabeçalho do site
 
 <script>
 function upload_foto(estudante_id) {
-    // Criar input file invisível
     let input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
@@ -83,19 +90,15 @@ function upload_foto(estudante_id) {
     input.onchange = function (event) {
         let file = event.target.files[0];
         if (!file) return;
-        console.log(estudante_id)
-        // Exibir loader na div do estudante
         let estudanteDiv = document.getElementById('estudante-' + estudante_id);
         estudanteDiv.innerHTML += '<p id="loader-' + estudante_id + '">Atualizando imagem...</p>';
 
-        // Preparar dados para envio
         let formData = new FormData();
         formData.append('action', 'upload_foto_estudante');
         formData.append('estudante_id', estudante_id);
         formData.append('imagem', file);
         formData.append('_ajax_nonce', '<?php echo wp_create_nonce('upload_foto_estudante'); ?>');
 
-        // Fazer upload via AJAX
         fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
             method: 'POST',
             body: formData
@@ -103,11 +106,10 @@ function upload_foto(estudante_id) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Buscar HTML atualizado do estudante
                 fetch('<?php echo admin_url('admin-ajax.php'); ?>?action=buscar_estudante_atualizado&estudante_id=' + estudante_id)
                 .then(response => response.text())
                 .then(html => {
-                    estudanteDiv.outerHTML = html; // Substitui a div do estudante inteira
+                    estudanteDiv.outerHTML = html;
                 });
             } else {
                 alert('Erro ao atualizar imagem: ' + data.data);
@@ -120,11 +122,8 @@ function upload_foto(estudante_id) {
         });
     };
 
-    // Clicar no input
     input.click();
 }
 </script>
 
-<?php
-get_footer(); // Inclui o rodapé do site
-?>
+<?php get_footer(); ?>
